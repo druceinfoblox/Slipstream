@@ -8,7 +8,7 @@ Slipstream harvests known public MCP (Model Context Protocol) server hostnames f
 
 When loaded into an Infoblox DNS Firewall (or any BIND/Unbound RPZ-capable resolver), DNS queries to known MCP server hostnames are answered with the proxy IP instead of the real address — transparently redirecting AI agent connections through the proxy for prompt injection detection, data loss prevention, and behavioral analysis.
 
-The proxy is responsible for TLS termination and inspection. Non-AI connections forwarded accidentally are passed through harmlessly.
+The proxy is responsible for TLS termination, inspection, and forwarding. Incorrectly classified non-AI traffic may be disrupted unless the proxy is explicitly configured to handle it safely.
 
 ## Architecture
 
@@ -37,8 +37,13 @@ Results are merged, deduplicated, and filtered (localhost, IPs, and shared hosti
 
 ## Usage
 
+Requires **Python 3.10 or newer** (`str | None` type annotations are evaluated at startup), plus the dependencies in `requirements.txt`. Use an isolated virtual environment and verify the offline seed-only path before any network harvest:
+
 ```bash
+python3 -m venv .venv
+. .venv/bin/activate
 pip install -r requirements.txt
+python harvester.py --seed-only --output smoke.rpz  # no network calls
 
 # Basic — generates RPZ with NXDOMAIN (block)
 python harvester.py --output mcp.rpz
@@ -55,7 +60,7 @@ python harvester.py --output mcp.rpz --no-github
 
 ## Output
 
-Generates a standard BIND/RPZ zone file. Load it in Infoblox DNS Firewall or any RPZ-capable resolver.
+Generates a standard BIND/RPZ zone file. **Review the generated hostnames before loading it into a resolver**: the seed-only smoke run included broadly used API domains, and an NXDOMAIN policy could disrupt unrelated traffic. Redirect mode requires a correctly configured inspection proxy; this repository does not prove that non-AI connections are passed through harmlessly. Do not deploy a generated policy automatically as part of an archive/rebuild check.
 
 ## Examples
 
